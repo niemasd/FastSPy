@@ -51,23 +51,24 @@ def read_seqs_FASTA(stream):
     return seqs
 
 # build S matrix, where S(i,j) = (a,b) denoting that the j-th nucleotide of the i-th sequence (no gaps) is in site a of reference and site b of estimated
-def build_S(ref_aln, est_aln):
-    num_rows = len(ref_aln); num_cols = max(len(seq)-seq.count('-') for seq in ref_aln)
-    Sa = zeros((num_rows,num_cols), dtype=uintc); Sb = zeros((num_rows,num_cols), dtype=uintc)
-    for S,aln in ((Sa,ref_aln), (Sb,est_aln)):
-        for i in range(len(aln)):
-            S_row = S[i]; aln_row = aln[i]; j = 0
-            for a in range(len(aln_row)):
-                if aln_row[a] != '-':
-                    S_row[j] = a+1; j += 1 # store values using 1-based indexing so index = 0 implies sequence was shorter than that
-    return Sa,Sb
+def build_Sb(est_aln): # only build Sb
+    num_rows = len(ref_aln); num_cols = max(len(seq)-seq.count('-') for seq in ref_aln); Sb = zeros((num_rows,num_cols), dtype=uintc)
+    for i in range(len(est_aln)):
+        Sb_row = Sb[i]; aln_row = est_aln[i]; j = 0
+        for a in range(len(aln_row)):
+            if aln_row[a] != '-':
+                Sb_row[j] = a+1; j += 1 # store values using 1-based indexing so index = 0 implies sequence was shorter than that
+    return Sb
 
 # Compute the SP-FN error
 def SPFN(ref_aln,est_aln):
     if VERBOSE:
         print("Computing S matrix...", file=stderr)
         stderr.flush()
-    Sa,Sb = build_S(ref_aln,est_aln)
+    Sb = build_Sb(est_aln)
+    if VERBOSE:
+        print("Computing number of reference homologous pairs...", file=stderr)
+        stderr.flush()
     A = [int(j*(j-1)/2) for j in range(1,len(ref_aln)+1)]
     ref_num_hom_pairs = sum(A[sum(row[j] != '-' for row in ref_aln)-1] for j in range(len(ref_aln[0])))
     List = [list() for _ in range(len(ref_aln[0]))]
